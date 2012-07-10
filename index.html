@@ -42,7 +42,7 @@ var map = new L.Map('map-canvas', {
   zoom: 6
 });
 
-var tileUrl = 'http://a.tiles.mapbox.com/v3/mapbox.mapbox-streets.jsonp';
+var tileUrl = 'http://a.tiles.mapbox.com/v3/mapbox.mapbox-warden.jsonp';
 
 wax.tilejson(tileUrl, function(tilejson) {
   map.addLayer(new wax.leaf.connector(tilejson));
