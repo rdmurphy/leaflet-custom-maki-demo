@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+<title>Leaflet Custom Icon Demo</title>
+<link rel="stylesheet" href="styles/leaflet.css" />
+<!--[if lte IE 8]>
+  <link rel="stylesheet" href="styles/leaflet.ie.css" />
+<![endif]-->
+<style>
+
+#map-canvas {
+  height: 598px;
+  width: 648px;
+  border: 1px solid #444444;
+  margin: 5px 0 0 0;
+}
+
+</style>
+</head>
+<body>
+
+Last updated: <span id="update"></span>
+<div id="map-canvas"></div>
+
+</body>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.js"></script>
+<script src="scripts/leaflet.js"></script>
+<script src="scripts/wax.leaf.js"></script>
+<script>
+
+var delimitNumbers = function(str) {
+  return (str + "").replace(/(\d)(?=(\d{3})+(\.\d+|)\b)/g, "$1,");
+};
+
+
+var dataURL = "https://api.scraperwiki.com/api/1.0/datastore/sqlite?format=jsondict&name=texas_reservoir_water_level_scraper&query=select%20*%20from%20%60swdata%60";
+var updateURL = "https://api.scraperwiki.com/api/1.0/scraper/getinfo?format=jsondict&name=texas_reservoir_water_level_scraper&version=-1&quietfields=code%7Crunevents%7Cdatasummary%7Cuserroles%7Chistory&callback=?";
+
+var map = new L.Map('map-canvas', {
+  center: new L.LatLng(31.41, -99.93),
+  zoom: 6
+});
+
+var tileUrl = 'http://a.tiles.mapbox.com/v3/mapbox.mapbox-streets.jsonp';
+
+wax.tilejson(tileUrl, function(tilejson) {
+  map.addLayer(new wax.leaf.connector(tilejson));
+});
+
+var basicIcon = L.Icon.extend({
+  iconUrl: 'images/blue-dot.png',
+  shadowUrl: null,
+  iconSize: new L.Point(24, 24),
+  shadowSize: null,
+  iconAnchor: new L.Point(12, 12),
+  popupAnchor: new L.Point(1, 0)
+});
+
+var blueIcon = new basicIcon(),
+    redIcon = new basicIcon('images/red-dot.png'),
+    orangeIcon = new basicIcon('images/orange-dot.png'),
+    greenIcon = new basicIcon('images/green-dot.png');
+
+$.getJSON(dataURL, function(data) {
+  $.each(data, function(key, value) {
+    var icon,
+    percent = value.percent_full;
+
+    if (percent >= 75) {
+      icon = greenIcon;
+    } else if (percent >= 50) {
+      icon = blueIcon;
+    } else if (percent >= 25) {
+      icon = orangeIcon;
+    } else {
+      icon = redIcon;
+    };
+
+    var latlng = new L.LatLng(value.lon, value.lat);
+    var marker = new L.Marker(latlng, {icon: icon});
+    var name = "<div style='text-align: center'>" + value.name + "<br>" + value.percent_full + "% Full<br>Water in Reservoir: " + delimitNumbers(parseFloat(value.conservation_storage,10).toFixed(2)) + " acre-feet</div>";
+    marker.bindPopup(name).openPopup();
+    map.addLayer(marker);
+  });
+});
+
+var getFormattedDate = function(piece) {
+  return (piece.getMonth() + 1) + "/" + piece.getDate() + "/" + piece.getFullYear();
+};
+
+var getFormattedTime = function(piece) {
+  var longhour = piece.getHours(),
+      ampm = "",
+      hour;
+
+  if(longhour < 12) {
+    ampm = "a.m.";
+  } else {
+    ampm = "p.m.";
+  };
+
+  if(longhour === 0) {
+   hour = 12;
+  } else if(longhour > 12) {
+   hour = longhour - 12;
+  } else {
+    hour = longhour;
+  };
+
+  var minute = piece.getMinutes();
+
+  return hour + ":" + minute + " " + ampm;
+};
+
+$.getJSON(updateURL, function(data) {
+  var updatedOn = data[0]["last_run"];
+  var updateDate = new Date(updatedOn);
+  var cleanDate = getFormattedDate(updateDate) + " at " + getFormattedTime(updateDate);
+
+  $("#update").text(cleanDate);
+
+});
+
+
+</script>
+</html>
